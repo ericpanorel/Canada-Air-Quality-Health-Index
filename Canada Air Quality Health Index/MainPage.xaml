@@ -1,0 +1,15 @@
+﻿<Page
+    x:Class="Canada_Air_Quality_Health_Index.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Canada_Air_Quality_Health_Index"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:bm="using:Bing.Maps"
+    mc:Ignorable="d" 
+    Loaded="Page_Loaded">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <bm:Map Credentials="USE_YOUR_OWN_BING_MAP_KEY" x:Name="myMap"></bm:Map>
+    </Grid>
+</Page>
