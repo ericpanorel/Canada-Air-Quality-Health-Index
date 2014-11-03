@@ -45,17 +45,21 @@ namespace Canada_Air_Quality_Health_Index
 
         }
 
+
         private async Task Populate()
         {
+            // Capture the UI synchronization context for use later
             var ui = TaskScheduler.FromCurrentSynchronizationContext();
 
+            // First, asynchronously download the list of AQHI items
+            // and don't care which context to resume (Thread pool)
             var xmlDoc = await DownloadList().ConfigureAwait(false);
 
 
             XmlNodeList regionNodes = xmlDoc.GetElementsByTagName("region");
 
 
-
+            // You can try to parallelize this, I have
             foreach (var node in regionNodes)
             //Parallel.ForEach(regionNodes,  async (node) =>
             {
@@ -73,113 +77,122 @@ namespace Canada_Air_Quality_Health_Index
                     item.forecLink = node.SelectSingleNode("pathToCurrentForecast").InnerText;
                     item.obsLink = node.SelectSingleNode("pathToCurrentObservation").InnerText;
 
-                    // get the air quality stuff, get coordinates as asynchronous tasks
+                    // Define three async awaitable tasks for getting the coordinates, 
+                    // getting the observation
+                    // getting the forecast
 
                     var coordsTask = GetCoordsTask(item.cgndb);
                     var observationTask = GetObservationTask(item.obsLink);
                     var forecastTask = GetForecastTask(item.forecLink);
 
+                    // get the coordinates of a given item
                     var coordsText = await coordsTask.ConfigureAwait(false);
 
                     item.Lat = double.Parse(coordsText.Split(new char[] { ',' }, StringSplitOptions.None)[0]);
                     item.Lng = double.Parse(coordsText.Split(new char[] { ',' }, StringSplitOptions.None)[1]);
 
+                    // get the observations
                     var observationText = await observationTask;
+
+                    // get the forecast
                     var forecastText = await forecastTask;
 
+                    // post to the UI thread
                     await Task.Factory.StartNew(() =>
-                     {
-                         // add pushpin
-                         Bing.Maps.Location loc = new Bing.Maps.Location
-                         {
+                    {
+                        // add pushpin
+                        Bing.Maps.Location loc = new Bing.Maps.Location
+                        {
 
-                             Latitude = item.Lat,
-                             Longitude = item.Lng
+                            Latitude = item.Lat,
+                            Longitude = item.Lng
 
-                         };
-                         Pushpin pushpin = new Pushpin();
-
-
-                         var idx = Math.Round(double.Parse(observationText), 0);
-                         var status = "";
-                         var clr = Colors.Black;
-                         switch ((int)idx)
-                         {
-                             case 0:
-                                 status = "Low Risk";
-                                 clr = Color.FromArgb(255, 153, 204, 255);
-                                 break;
-                             case 1:
-                                 status = "Low Risk";
-                                 clr = Color.FromArgb(255, 153, 204, 255);
-                                 break;
-                             case 2:
-                                 status = "Low Risk";
-                                 clr = Color.FromArgb(255, 102, 204, 255);
-                                 break;
-                             case 3:
-                                 status = "Low Risk";
-                                 clr = Color.FromArgb(255, 0, 204, 255);
-                                 break;
-                             case 4:
-                                 status = "Moderate Risk";
-                                 clr = Color.FromArgb(255, 153, 204, 204);
-                                 break;
-                             case 5:
-                                 status = "Moderate Risk";
-                                 clr = Color.FromArgb(255, 153, 153, 153);
-                                 break;
-                             case 6:
-                                 status = "Moderate Risk";
-                                 clr = Color.FromArgb(255, 153, 153, 102);
-                                 break;
-                             case 7:
-                                 status = "High Risk";
-                                 clr = Color.FromArgb(255, 153, 102, 0);
-                                 break;
-                             case 8:
-                                 status = "High Risk";
-                                 clr = Color.FromArgb(255, 153, 102, 51);
-                                 break;
-                             case 9:
-                                 status = "High Risk";
-                                 clr = Color.FromArgb(255, 153, 51, 0);
-                                 break;
-                             case 10:
-                                 status = "High Risk";
-                                 clr = Color.FromArgb(255, 102, 0, 0);
-                                 break;
-                             default:
-                                 status = "Extreme High Risk";
-                                 clr = Color.FromArgb(255, 255, 0, 0);
-                                 break;
+                        };
+                        Pushpin pushpin = new Pushpin();
 
 
-                         }
+                        var idx = Math.Round(double.Parse(observationText), 0);
+                        var status = "";
+                        var clr = Colors.Black;
+                        switch ((int)idx)
+                        {
+                            case 0:
+                                status = "Low Risk";
+                                clr = Color.FromArgb(255, 153, 204, 255);
+                                break;
+                            case 1:
+                                status = "Low Risk";
+                                clr = Color.FromArgb(255, 153, 204, 255);
+                                break;
+                            case 2:
+                                status = "Low Risk";
+                                clr = Color.FromArgb(255, 102, 204, 255);
+                                break;
+                            case 3:
+                                status = "Low Risk";
+                                clr = Color.FromArgb(255, 0, 204, 255);
+                                break;
+                            case 4:
+                                status = "Moderate Risk";
+                                clr = Color.FromArgb(255, 153, 204, 204);
+                                break;
+                            case 5:
+                                status = "Moderate Risk";
+                                clr = Color.FromArgb(255, 153, 153, 153);
+                                break;
+                            case 6:
+                                status = "Moderate Risk";
+                                clr = Color.FromArgb(255, 153, 153, 102);
+                                break;
+                            case 7:
+                                status = "High Risk";
+                                clr = Color.FromArgb(255, 153, 102, 0);
+                                break;
+                            case 8:
+                                status = "High Risk";
+                                clr = Color.FromArgb(255, 153, 102, 51);
+                                break;
+                            case 9:
+                                status = "High Risk";
+                                clr = Color.FromArgb(255, 153, 51, 0);
+                                break;
+                            case 10:
+                                status = "High Risk";
+                                clr = Color.FromArgb(255, 102, 0, 0);
+                                break;
+                            default:
+                                status = "Extreme High Risk";
+                                clr = Color.FromArgb(255, 255, 0, 0);
+                                break;
 
-                         pushpin.Background = new SolidColorBrush(clr);
+
+                        }
+
+                        pushpin.Background = new SolidColorBrush(clr);
 
 
-                         pushpin.Text = observationText;
-                         MapLayer.SetPosition(pushpin, loc);
-                         myMap.Children.Add(pushpin);
+                        pushpin.Text = observationText;
+                        MapLayer.SetPosition(pushpin, loc);
+                        myMap.Children.Add(pushpin);
 
-                         var dialogMessage = observationText + " for " + item.nameEn + " (" + status + ")" + System.Environment.NewLine;
-                         dialogMessage += forecastText;
+                        var dialogMessage = observationText + " for " + item.nameEn + " (" + status + ")" + System.Environment.NewLine;
+                        dialogMessage += forecastText;
 
-                         pushpin.Tapped += async (s, e) =>
-                         {
-                             MessageDialog dialog = new MessageDialog(dialogMessage);
-                             await dialog.ShowAsync();
-                         };
+                        pushpin.Tapped += async (s, e) =>
+                        {
+                            MessageDialog dialog = new MessageDialog(dialogMessage);
+                            await dialog.ShowAsync();
+                        };
 
 
-                     }, CancellationToken.None, TaskCreationOptions.None, ui).ConfigureAwait(false);
+                    }, CancellationToken.None, TaskCreationOptions.None, ui).ConfigureAwait(false);
 
 
 
 
                     /*
+                    // get them in one blow???
+                    
                     Task<string>[] taks = { observationTask, forecastTask , coordsTask };
 
                     
@@ -306,8 +319,12 @@ namespace Canada_Air_Quality_Health_Index
 
             }
 
-            MessageDialog doneDlg = new MessageDialog("Done Loading...");
-            await doneDlg.ShowAsync();
+            await Task.Factory.StartNew(async () =>
+            {
+                MessageDialog doneDlg = new MessageDialog("Done Loading...");
+                await doneDlg.ShowAsync();
+            }, CancellationToken.None, TaskCreationOptions.None, ui).ConfigureAwait(false);
+
         }
 
 
